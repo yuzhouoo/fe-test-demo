@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { MapIcon, MusicalNoteIcon, ChatBubbleBottomCenterIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -58,7 +58,7 @@ const SortableItem = ({ id, children }: { id: string; children: React.ReactNode 
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing ${isDragging ? 'ring-2 ring-green-500' : ''} ${!isDragging && isOver ? 'ring-2 ring-red-500' : ''}`}
+      className={`cursor-grab active:cursor-grabbing w-full h-full ${isDragging ? 'ring-2 ring-green-500' : ''} ${!isDragging && isOver ? 'ring-2 ring-red-500' : ''}`}
     >
       {children}
     </div>
@@ -67,6 +67,40 @@ const SortableItem = ({ id, children }: { id: string; children: React.ReactNode 
 
 export default function Home() {
   const [panels, setPanels] = useState<Panel[]>(initialPanels)
+  const [windowWidth, setWindowWidth] = useState(1200)
+  const [isLastElementVisible, setIsLastElementVisible] = useState(false)
+  const panelContainerRef = React.useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    const checkLastElementVisibility = () => {
+      if (panelContainerRef.current) {
+        const container = panelContainerRef.current
+        const lastChild = container.lastElementChild
+        if (lastChild) {
+          const containerRect = container.getBoundingClientRect()
+          const lastChildRect = lastChild.getBoundingClientRect()
+          setIsLastElementVisible(
+            lastChildRect.left >= containerRect.left &&
+            lastChildRect.right <= containerRect.right
+          )
+        }
+      }
+    }
+
+    checkLastElementVisibility()
+    window.addEventListener('resize', checkLastElementVisibility)
+    return () => window.removeEventListener('resize', checkLastElementVisibility)
+  }, [panels])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -78,10 +112,10 @@ export default function Home() {
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
 
-    if (active.id !== over?.id) {
+    if (active.id !== over?.id && over) {
       setPanels((items) => {
         const activeIndex = items.findIndex((item) => item.id === active.id)
-        const overIndex = items.findIndex((item) => item.id === over?.id)
+        const overIndex = items.findIndex((item) => item.id === over.id)
 
         if (overIndex === -1) return items
 
@@ -126,15 +160,27 @@ export default function Home() {
       </div>
 
       {/* 右侧面板区域 */}
-      <div className="flex-1 overflow-x-auto">
-        <div className="min-w-[1200px] h-full p-4">
+      <div className={`flex-1 ${windowWidth - 80 < 1200 ? 'overflow-x-auto' : ''}`}>
+        <div className={`w-full h-full p-4 ${windowWidth - 80 < 1200 ? 'min-w-[1200px]' : ''}`}>
           <div className="h-full flex items-stretch">
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-              <SortableContext items={panels.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-                <div className="panel-container flex space-x-4 pb-4">
+            <DndContext
+              sensors={sensors}
+              onDragEnd={handleDragEnd}
+              modifiers={{
+                restrictToParentElement: true,
+              }}
+              autoScroll={{
+                enabled: true,
+                sensitivity: 50,
+                speed: 0.8,
+                boundary: 'parent',
+              }}
+            >
+              <SortableContext items={panels.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
+                <div className="panel-container flex space-x-4 pb-4 w-full" ref={panelContainerRef}>
                   {panels.filter((p) => p.isOpen).map((panel) => (
                     <SortableItem key={panel.id} id={panel.id}>
-                      <div className="w-96 bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col h-full">
+                      <div className="w-full h-full min-w-96 bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <div className="flex items-center justify-between p-4 border-b border-gray-100">
                           <div className="flex items-center space-x-2">
                             {panel.icon}
