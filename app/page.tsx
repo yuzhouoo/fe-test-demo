@@ -39,9 +39,11 @@ const initialPanels: Panel[] = [
 ]
 
 const SortableItem = ({ id, children }: { id: string; children: React.ReactNode }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, over } = useSortable({
     id,
   })
+
+  const isOver = over?.id === id
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -56,7 +58,7 @@ const SortableItem = ({ id, children }: { id: string; children: React.ReactNode 
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab active:cursor-grabbing"
+      className={`cursor-grab active:cursor-grabbing ${isDragging ? 'ring-2 ring-green-500' : ''} ${!isDragging && isOver ? 'ring-2 ring-red-500' : ''}`}
     >
       {children}
     </div>
@@ -107,14 +109,14 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* 左侧固定导航 */}
-      <div className="w-20 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-8">
+      <div className="w-[80px] bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-8 flex-shrink-0">
         {panels.map((panel) => (
           <button
             key={panel.id}
             onClick={() => togglePanel(panel.id)}
             className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-colors w-full ${panel.isOpen
-              ? 'bg-blue-50 text-primary'
-              : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+              ? 'text-blue-600 hover:bg-blue-50'
+              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}
             aria-label={`${panel.isOpen ? '关闭' : '打开'}${panel.title}面板`}
           >
             {panel.icon}
@@ -124,40 +126,41 @@ export default function Home() {
       </div>
 
       {/* 右侧面板区域 */}
-      <div className="flex-1 flex flex-col">
-
-        <div className="flex-1 p-4 flex items-stretch">
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <SortableContext items={panels.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-              <div className="panel-container flex space-x-4 pb-4 flex-1">
-                {panels.filter((p) => p.isOpen).map((panel) => (
-                  <SortableItem key={panel.id} id={panel.id}>
-                    <div className="flex-1 min-w-80 bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col h-full">
-                      <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                        <div className="flex items-center space-x-2">
-                          {panel.icon}
-                          <h3 className="font-medium text-gray-700">{panel.title}</h3>
+      <div className="flex-1 overflow-x-auto">
+        <div className="min-w-[1200px] h-full p-4">
+          <div className="h-full flex items-stretch">
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <SortableContext items={panels.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                <div className="panel-container flex space-x-4 pb-4">
+                  {panels.filter((p) => p.isOpen).map((panel) => (
+                    <SortableItem key={panel.id} id={panel.id}>
+                      <div className="w-96 bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col h-full">
+                        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                          <div className="flex items-center space-x-2">
+                            {panel.icon}
+                            <h3 className="font-medium text-gray-700">{panel.title}</h3>
+                          </div>
+                          <button
+                            onClick={() => closePanel(panel.id)}
+                            className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
+                            aria-label="关闭面板"
+                          >
+                            <XMarkIcon className="w-5 h-5" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => closePanel(panel.id)}
-                          className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
-                          aria-label="关闭面板"
-                        >
-                          <XMarkIcon className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <div className="flex-1 p-4 flex flex-col">
-                        <p className="text-gray-600">{panel.content}</p>
-                        <div className="mt-4 text-sm text-gray-500 flex-1 flex items-center justify-center">
-                          这是{panel.title}面板的内容区域
+                        <div className="flex-1 p-4 flex flex-col">
+                          <p className="text-gray-600">{panel.content}</p>
+                          <div className="mt-4 text-sm text-gray-500 flex-1 flex items-center justify-center">
+                            这是{panel.title}面板的内容区域
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </SortableItem>
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+                    </SortableItem>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
         </div>
       </div>
     </div>
