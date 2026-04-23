@@ -99,8 +99,12 @@ export default function Home() {
       if (activeElement && activeElement.rect && activeElement.rect.current) {
         const activeRect = activeElement.rect.current.translated
         if (activeRect) {
-          const isOutOfBounds = activeRect.left < containerRect.left || activeRect.right > containerRect.right
-          setIsAtTail(isOutOfBounds)
+          if (containerRect.width >= 1200) {
+            const isOutOfBounds = activeRect.left < containerRect.left || activeRect.right > containerRect.right
+            setIsAtTail(isOutOfBounds)
+          } else {
+            setIsAtTail(false)
+          }
         }
       }
     }
@@ -110,21 +114,30 @@ export default function Home() {
     const { active, over } = event
 
     if (active.id !== over?.id && over) {
+      const panelsIds = panels.map((p) => p.id)
+      const overIndex = panelsIds.indexOf(over.id)
+
+      if (overIndex === 0 || overIndex === panelsIds.length - 1) {
+        if (panelContainerRef.current) {
+          panelContainerRef.current.scrollLeft = overIndex === 0 ? 0 : panelContainerRef.current.scrollWidth
+        }
+      }
+
       setPanels((items) => {
         const activeIndex = items.findIndex((item) => item.id === active.id)
-        const overIndex = items.findIndex((item) => item.id === over.id)
+        const newOverIndex = items.findIndex((item) => item.id === over.id)
 
-        if (overIndex === -1) return items
+        if (newOverIndex === -1) return items
 
         const newItems = Array.from(items)
         const [movedItem] = newItems.splice(activeIndex, 1)
-        newItems.splice(overIndex, 0, movedItem)
+        newItems.splice(newOverIndex, 0, movedItem)
 
         return newItems
       })
     }
     setIsAtTail(false)
-  }, [])
+  }, [panels])
 
   const togglePanel = (id: string) => {
     setPanels((prev) => prev.map((panel) =>
@@ -167,7 +180,7 @@ export default function Home() {
       </div>
 
       {/* 右侧面板区域 */}
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto" ref={panelContainerRef}>
         <div className="w-full h-full p-4 min-w-[1200px]">
           <div className="h-full flex items-stretch">
             <DndContext
@@ -186,7 +199,7 @@ export default function Home() {
               } : false}
             >
               <SortableContext items={panels.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
-                <div className="panel-container flex space-x-4 pb-4 w-full" ref={panelContainerRef}>
+                <div className="panel-container flex space-x-4 pb-4 w-full">
                   {panels.filter((p) => p.isOpen).map((panel) => (
                     <SortableItem key={panel.id} id={panel.id}>
                       <div className="w-full h-full min-w-96 bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
