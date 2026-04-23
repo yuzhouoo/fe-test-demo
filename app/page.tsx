@@ -167,8 +167,8 @@ export default function Home() {
       </div>
 
       {/* 右侧面板区域 */}
-      <div className="flex-1 overflow-hidden">
-        <div className="w-full h-full p-4 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto">
+        <div className="w-full h-full p-4 min-w-[1200px]">
           <div className="h-full flex items-stretch">
             <DndContext
               sensors={sensors}
