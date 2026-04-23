@@ -176,6 +176,7 @@ export default function Home() {
               onDragMove={handleDragMove}
               modifiers={{
                 restrictToParentElement: true,
+                restrictToVerticalAxis: true,
               }}
               autoScroll={!isAtTail ? {
                 enabled: true,
