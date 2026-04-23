@@ -68,10 +68,12 @@ const SortableItem = ({ id, children }: { id: string; children: React.ReactNode 
 export default function Home() {
   const [panels, setPanels] = useState<Panel[]>(initialPanels)
   const [windowWidth, setWindowWidth] = useState(1200)
-  const [isLastElementVisible, setIsLastElementVisible] = useState(false)
+  const [isAtTail, setIsAtTail] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const panelContainerRef = React.useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    setIsMounted(true)
     const handleResize = () => {
       setWindowWidth(window.innerWidth)
     }
@@ -80,27 +82,6 @@ export default function Home() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  useEffect(() => {
-    const checkLastElementVisibility = () => {
-      if (panelContainerRef.current) {
-        const container = panelContainerRef.current
-        const lastChild = container.lastElementChild
-        if (lastChild) {
-          const containerRect = container.getBoundingClientRect()
-          const lastChildRect = lastChild.getBoundingClientRect()
-          setIsLastElementVisible(
-            lastChildRect.left >= containerRect.left &&
-            lastChildRect.right <= containerRect.right
-          )
-        }
-      }
-    }
-
-    checkLastElementVisibility()
-    window.addEventListener('resize', checkLastElementVisibility)
-    return () => window.removeEventListener('resize', checkLastElementVisibility)
-  }, [panels])
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -108,6 +89,22 @@ export default function Home() {
       },
     })
   )
+
+  const handleDragMove = useCallback((event) => {
+    if (panelContainerRef.current) {
+      const container = panelContainerRef.current
+      const containerRect = container.getBoundingClientRect()
+      const activeElement = event.active
+
+      if (activeElement && activeElement.rect && activeElement.rect.current) {
+        const activeRect = activeElement.rect.current.translated
+        if (activeRect) {
+          const isOutOfBounds = activeRect.left < containerRect.left || activeRect.right > containerRect.right
+          setIsAtTail(isOutOfBounds)
+        }
+      }
+    }
+  }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
@@ -126,6 +123,7 @@ export default function Home() {
         return newItems
       })
     }
+    setIsAtTail(false)
   }, [])
 
   const togglePanel = (id: string) => {
@@ -138,6 +136,15 @@ export default function Home() {
     setPanels((prev) => prev.map((panel) =>
       panel.id === id ? { ...panel, isOpen: false } : panel
     ))
+  }
+
+  if (!isMounted) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <div className="w-[80px] bg-white border-r border-gray-200"></div>
+        <div className="flex-1"></div>
+      </div>
+    )
   }
 
   return (
@@ -160,21 +167,22 @@ export default function Home() {
       </div>
 
       {/* 右侧面板区域 */}
-      <div className={`flex-1 ${windowWidth - 80 < 1200 ? 'overflow-x-auto' : ''}`}>
-        <div className={`w-full h-full p-4 ${windowWidth - 80 < 1200 ? 'min-w-[1200px]' : ''}`}>
+      <div className="flex-1 overflow-hidden">
+        <div className="w-full h-full p-4 overflow-x-auto">
           <div className="h-full flex items-stretch">
             <DndContext
               sensors={sensors}
               onDragEnd={handleDragEnd}
+              onDragMove={handleDragMove}
               modifiers={{
                 restrictToParentElement: true,
               }}
-              autoScroll={{
+              autoScroll={!isAtTail ? {
                 enabled: true,
-                sensitivity: 50,
-                speed: 0.8,
+                sensitivity: 60,
+                speed: 0.6,
                 boundary: 'parent',
-              }}
+              } : false}
             >
               <SortableContext items={panels.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
                 <div className="panel-container flex space-x-4 pb-4 w-full" ref={panelContainerRef}>
