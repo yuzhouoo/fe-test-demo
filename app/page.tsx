@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useEffect } from 'react'
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragEndEvent, DragMoveEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { MapIcon, MusicalNoteIcon, ChatBubbleBottomCenterIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -90,7 +90,7 @@ export default function Home() {
     })
   )
 
-  const handleDragMove = useCallback((event) => {
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
     if (panelContainerRef.current) {
       const container = panelContainerRef.current
       const containerRect = container.getBoundingClientRect()
@@ -115,7 +115,7 @@ export default function Home() {
 
     if (active.id !== over?.id && over) {
       const panelsIds = panels.map((p) => p.id)
-      const overIndex = panelsIds.indexOf(over.id)
+      const overIndex = panelsIds.indexOf(String(over.id))
 
       if (overIndex === 0 || overIndex === panelsIds.length - 1) {
         if (panelContainerRef.current) {
@@ -125,7 +125,7 @@ export default function Home() {
 
       setPanels((items) => {
         const activeIndex = items.findIndex((item) => item.id === active.id)
-        const newOverIndex = items.findIndex((item) => item.id === over.id)
+        const newOverIndex = items.findIndex((item) => item.id === String(over.id))
 
         if (newOverIndex === -1) return items
 
@@ -187,16 +187,7 @@ export default function Home() {
               sensors={sensors}
               onDragEnd={handleDragEnd}
               onDragMove={handleDragMove}
-              modifiers={{
-                restrictToParentElement: true,
-                restrictToVerticalAxis: true,
-              }}
-              autoScroll={!isAtTail ? {
-                enabled: true,
-                sensitivity: 60,
-                speed: 0.6,
-                boundary: 'parent',
-              } : false}
+              autoScroll={!isAtTail}
             >
               <SortableContext items={panels.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
                 <div className="panel-container flex space-x-4 pb-4 w-full">
